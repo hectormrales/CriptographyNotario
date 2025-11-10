@@ -1,0 +1,16 @@
+Este es un documento de prueba para el Notario Digital.
+
+Contiene información importante que debe ser certificada y protegida criptográficamente.
+
+Fecha de creación: 10 de noviembre de 2025
+Autor: Sistema de Notarización Digital
+
+Este documento será usado para demostrar:
+1. Cálculo del hash SHA-256
+2. Notarización con firma ECDSA
+3. Verificación de integridad
+
+Si este documento se modifica aunque sea en un solo carácter,
+el hash cambiará completamente y la verificación fallará.
+
+¡Protegido por criptografía!

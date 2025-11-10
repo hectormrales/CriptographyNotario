@@ -1,0 +1,37 @@
+# Archivos Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claves privadas (IMPORTANTE: nunca subir a git)
+keys/notario_private.pem
+
+# Recibos (pueden contener información sensible)
+receipts/*.json
+
+# Logs
+*.log
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Configuración local
+.env
+config.local.json

@@ -1,0 +1,15 @@
+# Dependencias del Notario Digital
+
+# Criptografía
+cryptography>=41.0.0
+
+# Servidor API
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.0.0
+
+# Cliente HTTP
+requests>=2.31.0
+
+# GUI (incluido en Python estándar)
+# tkinter - viene preinstalado con Python
