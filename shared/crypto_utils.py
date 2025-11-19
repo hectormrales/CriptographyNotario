@@ -1,9 +1,10 @@
 """
 Módulo de utilidades criptográficas para el Notario Digital.
 Implementa ECDSA para firmas digitales y SHA-256 para hashing.
+Soporta múltiples curvas elípticas estándar.
 """
 
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 from cryptography.exceptions import InvalidSignature
@@ -13,27 +14,74 @@ from datetime import datetime
 import json
 
 
+# Curvas elípticas soportadas
+CURVAS_SOPORTADAS = {
+    'SECP256R1': {
+        'nombre': 'NIST P-256 (SECP256R1)',
+        'descripcion': 'Curva estándar NIST, usada globalmente para TLS/SSL',
+        'curva': ec.SECP256R1,
+        'tipo': 'ecdsa'
+    },
+    'SECP256K1': {
+        'nombre': 'SECP256K1',
+        'descripcion': 'Curva usada en Bitcoin y otras criptomonedas',
+        'curva': ec.SECP256K1,
+        'tipo': 'ecdsa'
+    },
+    'SECP384R1': {
+        'nombre': 'NIST P-384 (SECP384R1)',
+        'descripcion': 'Curva NIST de 384 bits, mayor seguridad',
+        'curva': ec.SECP384R1,
+        'tipo': 'ecdsa'
+    },
+    'SECP521R1': {
+        'nombre': 'NIST P-521 (SECP521R1)',
+        'descripcion': 'Curva NIST de 521 bits, máxima seguridad',
+        'curva': ec.SECP521R1,
+        'tipo': 'ecdsa'
+    },
+}
+
+
 class NotarioCrypto:
     """
     Clase principal para operaciones criptográficas del Notario Digital.
-    Utiliza ECDSA (Elliptic Curve Digital Signature Algorithm) con curva SECP256R1.
+    Utiliza ECDSA (Elliptic Curve Digital Signature Algorithm) con soporte para múltiples curvas.
     """
     
-    def __init__(self):
+    def __init__(self, curva='SECP256R1'):
+        """
+        Inicializa el objeto de criptografía.
+        
+        Args:
+            curva (str): Nombre de la curva a utilizar. Por defecto 'SECP256R1'.
+                        Opciones: 'SECP256R1', 'SECP256K1', 'SECP384R1', 'SECP521R1'
+        """
         self.private_key = None
         self.public_key = None
+        self.curva_nombre = curva
+        
+        if curva not in CURVAS_SOPORTADAS:
+            raise ValueError(f"Curva no soportada: {curva}. Usa una de: {list(CURVAS_SOPORTADAS.keys())}")
+        
+        self.curva_info = CURVAS_SOPORTADAS[curva]
+        self.tipo_curva = self.curva_info['tipo']
     
     def generar_par_claves(self):
         """
-        Genera un nuevo par de claves ECDSA usando la curva SECP256R1.
+        Genera un nuevo par de claves usando la curva especificada.
         
         Returns:
             tuple: (clave_privada, clave_publica)
         """
-        self.private_key = ec.generate_private_key(
-            ec.SECP256R1(),  # Curva elíptica segura
-            default_backend()
-        )
+        if self.tipo_curva == 'ecdsa':
+            self.private_key = ec.generate_private_key(
+                self.curva_info['curva'](),
+                default_backend()
+            )
+        else:
+            raise ValueError(f"Tipo de curva no soportado: {self.tipo_curva}")
+        
         self.public_key = self.private_key.public_key()
         return self.private_key, self.public_key
     
@@ -139,7 +187,7 @@ class NotarioCrypto:
             timestamp (str, optional): Timestamp ISO format. Si no se provee, usa el actual
             
         Returns:
-            dict: Recibo digital con {timestamp, hash, firma}
+            dict: Recibo digital con {timestamp, hash, firma, curva}
         """
         if self.private_key is None:
             raise ValueError("No hay clave privada cargada")
@@ -152,10 +200,13 @@ class NotarioCrypto:
         mensaje = f"{hash_hex}|{timestamp}".encode()
         
         # Firmar con ECDSA
-        firma = self.private_key.sign(
-            mensaje,
-            ec.ECDSA(hashes.SHA256())
-        )
+        if self.tipo_curva == 'ecdsa':
+            firma = self.private_key.sign(
+                mensaje,
+                ec.ECDSA(hashes.SHA256())
+            )
+        else:
+            raise ValueError(f"Tipo de curva no soportado para firma: {self.tipo_curva}")
         
         # Codificar firma en base64 para facilitar transmisión
         firma_b64 = base64.b64encode(firma).decode()
@@ -163,7 +214,8 @@ class NotarioCrypto:
         return {
             "timestamp": timestamp,
             "hash": hash_hex,
-            "firma": firma_b64
+            "firma": firma_b64,
+            "curva": self.curva_nombre
         }
     
     def verificar_firma(self, recibo, clave_publica=None):
@@ -171,7 +223,7 @@ class NotarioCrypto:
         Verifica la autenticidad de un recibo digital.
         
         Args:
-            recibo (dict): Recibo con {timestamp, hash, firma}
+            recibo (dict): Recibo con {timestamp, hash, firma, curva (opcional)}
             clave_publica: Clave pública a usar (opcional, usa la cargada si no se provee)
             
         Returns:
@@ -191,11 +243,14 @@ class NotarioCrypto:
             firma = base64.b64decode(recibo['firma'])
             
             # Verificar la firma
-            pub_key.verify(
-                firma,
-                mensaje,
-                ec.ECDSA(hashes.SHA256())
-            )
+            if self.tipo_curva == 'ecdsa':
+                pub_key.verify(
+                    firma,
+                    mensaje,
+                    ec.ECDSA(hashes.SHA256())
+                )
+            else:
+                raise ValueError(f"Tipo de curva no soportado para verificación: {self.tipo_curva}")
             
             return True
             
@@ -259,3 +314,28 @@ def cargar_recibo(filepath):
     """
     with open(filepath, 'r', encoding='utf-8') as f:
         return json.load(f)
+
+
+def obtener_curvas_disponibles():
+    """
+    Retorna un diccionario con las curvas disponibles y su información.
+    
+    Returns:
+        dict: Diccionario de curvas soportadas
+    """
+    return CURVAS_SOPORTADAS
+
+
+def obtener_nombre_curva(codigo):
+    """
+    Obtiene el nombre completo de una curva a partir de su código.
+    
+    Args:
+        codigo (str): Código de la curva (ej: 'SECP256K1')
+        
+    Returns:
+        str: Nombre completo de la curva
+    """
+    if codigo in CURVAS_SOPORTADAS:
+        return CURVAS_SOPORTADAS[codigo]['nombre']
+    return codigo

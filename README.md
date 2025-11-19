@@ -1,10 +1,12 @@
 # 🏛️ Notario Digital
 
-Sistema de notarización y verificación de documentos digitales usando criptografía ECDSA.
+Sistema de notarización y verificación de documentos digitales usando criptografía ECDSA con soporte para múltiples curvas elípticas.
 
 ## 📋 Descripción
 
 El Notario Digital es una aplicación de escritorio que permite certificar la existencia e integridad de documentos digitales en un momento específico del tiempo, utilizando firmas digitales basadas en criptografía de curva elíptica (ECDSA).
+
+**Versión 2.0** - Ahora con soporte para múltiples curvas estándar incluyendo la curva de Bitcoin (SECP256K1).
 
 ### El Problema que Resuelve
 
@@ -13,12 +15,24 @@ En el mundo digital, cualquiera puede modificar la fecha de creación de un arch
 - ✅ **Existencia temporal**: Prueba que un archivo existía en un momento exacto
 - ✅ **Integridad**: Garantiza que el archivo no ha sido alterado desde su notarización
 - ✅ **Autenticidad**: La firma digital es infalsificable matemáticamente
+- ✅ **Flexibilidad**: Soporta múltiples estándares criptográficos
 
 ## 🔐 Tecnología
 
+### Curvas Elípticas Soportadas
+
+El sistema ahora soporta **4 curvas estándar**:
+
+| Curva | Nombre Completo | Bits | Uso Principal |
+|-------|----------------|------|---------------|
+| **SECP256R1** | NIST P-256 | 256 | TLS/SSL, estándar global |
+| **SECP256K1** | Bitcoin/Ethereum | 256 | Blockchain, criptomonedas |
+| **SECP384R1** | NIST P-384 | 384 | Alta seguridad, datos clasificados |
+| **SECP521R1** | NIST P-521 | 521 | Máxima seguridad |
+
 ### Criptografía Utilizada
 
-- **ECDSA (Elliptic Curve Digital Signature Algorithm)**: Curva SECP256R1
+- **ECDSA (Elliptic Curve Digital Signature Algorithm)**: Con múltiples curvas
 - **SHA-256**: Para generar huellas digitales de los archivos
 - **Biblioteca**: `cryptography.io` - biblioteca oficial y recomendada
 
@@ -28,26 +42,29 @@ En el mundo digital, cualquiera puede modificar la fecha de creación de un arch
 ┌─────────────────┐         ┌─────────────────┐
 │  Cliente GUI    │         │  Servidor API   │
 │  (tkinter)      │◄───────►│  (FastAPI)      │
-│                 │  HTTPS  │                 │
+│                 │  HTTP   │                 │
 │  • Calcula hash │         │  • Firma ECDSA  │
 │  • Notariza     │         │  • Timestamping │
-│  • Verifica     │         │  • Verificación │
+│  • Verifica     │         │  • Multi-Curva  │
+│  • Gestión Keys │         │  • Verificación │
 └─────────────────┘         └─────────────────┘
 ```
 
 **Flujo de Notarización:**
 
-1. Usuario selecciona archivo → Cliente calcula SHA-256
-2. Cliente envía **solo el hash** (nunca el archivo completo - privacidad)
-3. Servidor añade timestamp y firma con clave privada ECDSA
-4. Servidor devuelve recibo digital infalsificable
+1. Usuario selecciona curva elíptica en "Gestión de Llaves"
+2. Usuario selecciona archivo → Cliente calcula SHA-256
+3. Cliente envía **solo el hash + curva** (nunca el archivo completo - privacidad)
+4. Servidor añade timestamp y firma con clave privada ECDSA de esa curva
+5. Servidor devuelve recibo digital infalsificable con información de curva
 
 **Flujo de Verificación:**
 
 1. Usuario carga recibo + archivo original
 2. Cliente calcula hash del archivo
-3. Servidor verifica firma usando clave pública
-4. Confirmación de autenticidad
+3. Recibo contiene información de qué curva se usó
+4. Servidor verifica firma usando clave pública de la curva correspondiente
+5. Confirmación de autenticidad
 
 ## 📦 Instalación
 
